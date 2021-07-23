@@ -1,0 +1,75 @@
+{
+  "geocodeService": {
+    "url": "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
+  },
+  "enableRouting": true,
+  "bufferRange": {
+    "minimum": 0,
+    "_default": 0,
+    "maximum": 100
+  },
+  "distanceUnits": "kilometers",
+  "distanceSettings": {
+    "miles": 9035,
+    "kilometers": 9036,
+    "feet": 9002,
+    "meters": 9001,
+    "yards": 9037,
+    "nauticalMiles": 9030
+  },
+  "maxDistance": "80",
+  "defaultZoomLevel": 13,
+  "tabs": [
+    {
+      "label": "",
+      "type": "proximity",
+      "layerTitle": "Points of Interest",
+      "layers": "Toronto_POI_5475",
+      "advStat": {
+        "stats": {
+          "fields": [],
+          "tabCount": false,
+          "outFields": [
+            {
+              "value": 0,
+              "expression": "ID",
+              "label": "ID"
+            },
+            {
+              "value": 0,
+              "expression": "ADDR_INFO",
+              "label": "ADDR_INFO"
+            },
+            {
+              "value": 0,
+              "expression": "TITLE",
+              "label": "TITLE"
+            }
+          ]
+        },
+        "analysisSummaryForReport": true,
+        "PopUpSummaryForReport": true
+      }
+    }
+  ],
+  "summaryDisplayEnabled": true,
+  "exportFieldsOptionForCSV": "allFields",
+  "incidentLabel": "Reference point",
+  "locateIncidentLabel": "Set your reference point",
+  "bufferLabel": "Buffer Distance",
+  "disableVisibilityManagement": false,
+  "saveEnabled": false,
+  "savePoints": false,
+  "drawGeodesic": false,
+  "saveLines": false,
+  "savePolys": false,
+  "selectionColor": "#636161",
+  "snapshotEnabled": false,
+  "reportEnabled": false,
+  "reportSettings": {
+    "printTaskURL": "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task",
+    "footnote": "",
+    "logo": "${appPath}/widgets/SituationAwareness/images/defaultLogo.png",
+    "textColor": "#0f96cc"
+  }
+}
