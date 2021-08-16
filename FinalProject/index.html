@@ -8,12 +8,15 @@
 
     <!--Leaflet css-->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 
     <style>
         body {
             margin: 0;
             padding: 0;
         }
+
         #map {
             width: 100%;
             height: 100vh;
@@ -23,6 +26,88 @@
 </head>
 
 <body>
+    <div id="title">
+        <h2>The Intersection of Pipeline Infrastructure and Sensitive Areas in Alberta, Canada</h2>
+
+
+    </div>
+
+    <div id="overlay">
+        <h4>Made by Lucus Sunderland</h4>
+        <h2>Data Selection Options </h2>
+        <h4>Mouseover features for details</h4>
+        <h4>Select features to display from the options below</h4>
+        <h3>Pipelines</h3>
+
+        <divid="pipelineMenu" class="col-xs-12">
+            <div class="col-xs-4">
+                <input type='radio' name='filtPipeline' value='all' checked>All
+            </div>
+            <div class="col-xs-4">
+                <input type='radio' name='filtPipeline' value='oil'>Oil
+            </div>
+            <div class="col-xs-4">
+                <input type='radio' name='filtPipeline' value='gas'>Gas
+            </div>
+            <h3>Sensitive Areas</h3>
+            <divid="AreaMenu" class="col-xs-12">
+                <div class="col-xs-4">
+                    <input type='checkbox' name='filtAbLands' value='yes'>Aboriginal Lands
+                </div>
+                <div class="col-xs-4">
+                    <input type='checkbox' name='filtNatParks' value='yes'>National Parks
+                </div>
+                <div class="col-xs-4">
+                    <input type='checkbox' name='filtPrtAreas' value='yes'>Protected Areas
+                </div>
+                <div class="col-xs-4">
+                    <input type='checkbox' name='filtRivers' value='yes'>Rivers
+                </div>
+                <div class="col-xs-4">
+                    <input type='checkbox' name='filtWetland' value='yes'>Wetlands
+                </div>
+
+                <h3>Buffer Options</h3>
+                <h4>Enter the buffer distance (km) that will surround pipeline features</h4>
+                <input type="number" id=distanceInput placeholder="km" min="0" max="100" step="5">
+                <button type="button" onclick="runBuffer()">Run Buffer</button>
+    </div>
+
+    <style>
+        #title {
+            position: absolute;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 0 5px;
+            left: 0;
+            margin-left: 55px;
+            margin-top: 10px;
+            border-radius: 10px;
+            box-shadow: 1px 1px 1px gray;
+            height: 65px;
+        }
+
+        #overlay {
+            position: absolute;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 0 10px;
+            left: 0;
+            margin-left: 10px;
+            margin-top: 85px;
+            border-radius: 10px;
+            box-shadow: 1px 1px 1px gray;
+            height: 630px;
+            width: 250px;
+        }
+
+        #distanceInput {
+            width: 50px;
+
+
+        }
+    </style>
+
     <div id="map"></div>
 </body>
 
@@ -35,19 +120,191 @@
 <!--AJAX javascript-->
 <script src="src/plugins/leaflet.ajax.min.js"></script>
 
+
 <script>
     // map initialization
     var map = L.map('map').setView([55, -116], 6);
 
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-});
+    var osm = L.tileLayer('https://api.mapbox.com/styles/v1/sunderll/cksdjuvtg438z17qechkj11pg/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1Ijoic3VuZGVybGwiLCJhIjoiY2txNXAybXJkMWp1cjJwbzcxNXk3eTlndiJ9.D3acuUr5fKXlILZvOb-kWA', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
 
-osm.addTo(map);
+    osm.addTo(map);
+</script>
 
-// AJAX js
-var pipelineLayer;
-pipelineLayer = L.geoJSON.ajax('src/data/pipelines.geojson');
-pipelineLayer.addTo(map);
+
+<script>
+    // AJAX js --- Add all layers
+
+    var boundaryLayer;
+    boundaryLayer = L.geoJSON.ajax('src/data/boundary.geojson', { style: styleBoundary, onEachFeature: processBoundary, filter: filterBoundary }).addTo(map);
+
+    var wetlandLayer;
+    wetlandLayer = L.geoJSON.ajax('src/data/wetland.geojson', { color: 'yellow', onEachFeature: processWetland, filter: filterWetland }).addTo(map);
+
+    var waterwaysLayer;
+    waterwaysLayer = L.geoJSON.ajax('src/data/waterways.geojson', { color: 'navy', onEachFeature: processWaterways, filter: filterWaterways }).addTo(map);
+
+    var pipelineLayer;
+    pipelineLayer = L.geoJSON.ajax('src/data/pipelines.geojson', { style: stylePipelines, onEachFeature: processPipelines, filter: filterPipeline }).addTo(map);
+
+    var bufferLayer;
+    var jsonbuffer;
+
+    //functions
+
+    function stylePipelines(json) {
+        var att = json.properties;
+        switch (att.type) {
+            case 'oil':
+                return { color: 'darkgoldenrod' };
+                break;
+            case 'gas':
+                return { color: 'darkred' };
+                break;
+            default:
+                return { color: 'darkgrey' }
+        }
+
+    }
+
+    function styleBoundary(json) {
+        var att = json.properties;
+        switch (att.boundary) {
+            case 'national_park':
+                return { color: 'darkgreen' };
+                break;
+            case 'protected_area':
+                return { color: 'lightgreen' };
+                break;
+            case 'aboriginal_lands':
+                return { color: 'tan' };
+                break;
+            default:
+                return { color: 'gray' }
+        }
+
+    }
+
+
+    function processPipelines(json, lyr) {
+        var att = json.properties;
+        lyr.bindTooltip("<h4>Feature: pipeline <br> Contents: " + att.type + "<br>Location: " + att.location);
+    }
+
+    function processBoundary(json, lyr) {
+        var att = json.properties;
+        var attName
+        if (att.boundary == "aboriginal_lands") {
+            attName = "Aboriginal Lands"
+        }
+        if (att.boundary == "national_park") {
+            attName = "National Park"
+        }
+        if (att.boundary == "protected_area") {
+            attName = "Protected area"
+        }
+        lyr.bindTooltip("<h4>Feature: " + attName + "<br>Name: " + att.name);
+    }
+
+    function processWetland(json, lyr) {
+        lyr.bindTooltip("<h4>Feature: Wetland");
+    }
+
+    function processWaterways(json, lyr) {
+        var att = json.properties;
+        lyr.bindTooltip("<h4>Feature: " + att.waterway + "<br>Name: " + att.name);
+    }
+
+    function filterPipeline(json) {
+        var att = json.properties;
+        var optFilter = $("input[name=filtPipeline]:checked").val();
+        if (optFilter == 'all') {
+            return true;
+        } else {
+            return (att.type == optFilter);
+        }
+    }
+
+    function filterBoundary(json) {
+        var att = json.properties;
+        var optFilterAbLands = $("input[name=filtAbLands]:checked").val();
+        var optFilterNatParks = $("input[name=filtNatParks]:checked").val();
+        var optFilterPrtAreas = $("input[name=filtPrtAreas]:checked").val();
+
+        if (optFilterAbLands == 'yes' && att.boundary == "aboriginal_lands") {
+            return true;
+        }
+
+        if (optFilterNatParks == 'yes' && att.boundary == "national_park") {
+            return true;
+        }
+
+        if (optFilterPrtAreas == 'yes' && att.boundary == "protected_area") {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    function filterWaterways(json) {
+        var att = json.properties;
+        var optFilter = $("input[name=filtRivers]:checked").val();
+        if (optFilter == 'yes') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
+
+    function filterWetland(json) {
+        var att = json.properties;
+        var optFilter = $("input[name=filtWetland]:checked").val();
+        if (optFilter == 'yes') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    $("input[name=filtPipeline]").click(function () {
+        pipelineLayer.refresh();
+    });
+
+    $("input[name=filtAbLands]").click(function () {
+        boundaryLayer.refresh();
+    });
+
+    $("input[name=filtNatParks]").click(function () {
+        boundaryLayer.refresh();
+    });
+
+    $("input[name=filtPrtAreas]").click(function () {
+        boundaryLayer.refresh();
+    });
+
+    $("input[name=filtRivers]").click(function () {
+        waterwaysLayer.refresh();
+    });
+
+    $("input[name=filtWetland]").click(function () {
+        wetlandLayer.refresh();
+    });
+
+    function runBuffer() {
+
+        if (bufferLayer) { bufferLayer.remove(); }
+
+        var bufferDist = document.getElementById("distanceInput").value;
+        jsonbuffer = turf.buffer(pipelineLayer.toGeoJSON(), bufferDist, { units: 'kilometers' });
+        bufferLayer = L.geoJSON(jsonbuffer, { style: { color: 'red', dashArray: '5,5', opacity: 0.4, fillOpacity: 0 } }).addTo(map);
+        pipelineLayer.bringToFront();
+        boundaryLayer.bringToFront();
+        wetlandLayer.bringToFront();
+        waterwaysLayer.bringToFront();
+    }
 
 </script>
